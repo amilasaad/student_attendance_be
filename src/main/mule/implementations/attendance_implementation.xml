@@ -1,0 +1,212 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:validation="http://www.mulesoft.org/schema/mule/validation" xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:batch="http://www.mulesoft.org/schema/mule/batch"
+	xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd">
+	<file:config name="File_Config" doc:name="File Config" doc:id="ccf38dd9-3df4-4848-a2a1-f822d4247c75" />
+	<flow name="attendance_implementationFlow|insert_attendance" doc:id="db7887fe-d928-4d06-9467-9a3cf9b6a521" >
+		<ee:transform doc:name="prepapre payload" doc:id="b5092dc8-84b9-46a1-bbd6-1b07f7b097d8" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+var dateTime = now() as String {format: 'yyyy-MM-dd hh:mm:ss a'}
+---
+{
+	"student_id": payload.student_id,
+    "in": if(payload.in ~= '1') dateTime else '',
+    "out": if(payload.out ~= '1') dateTime else '',
+    "class_id": payload.class_id
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<set-variable value="#[payload]" doc:name="inboundPayload" doc:id="981903df-efa5-4b9e-813f-b457fb39f203" variableName="inboundPayload"/>
+		<set-variable value="#[payload.student_id]" doc:name="id" doc:id="01068580-6de2-410e-a674-b12a090b82c0" variableName="id"/>
+		<flow-ref doc:name="commonsFlow|read_student_todays_attendance" doc:id="2ff6bb6b-1f6b-4d61-80d4-0cce5f8688e6" name="commonsFlow|read_student_todays_attendance"/>
+		<validation:is-null doc:name="Is null" doc:id="477b18e0-1cd6-4a56-95c0-d1e09dc15963" value="#[payload]" message="Already logged in"/>
+		<set-payload value="#[vars.inboundPayload]" doc:name="vars.inboundPayload" doc:id="bb73a47d-3813-4d97-a344-9b8c966e2ff3" />
+		<set-variable value="${db.queries.post_attendance}" doc:name="query" doc:id="fcd033a3-bf39-431e-a1ba-0bdd88c4dc73" variableName="query" />
+		<flow-ref doc:name="commonsFlow|Insert2DB" doc:id="b19cb5fd-dc7d-4e26-9a22-1e5ef9f1aa27" name="commonsFlow|Insert2DB" />
+		<flow-ref doc:name="commonsFlow|Success_Response" doc:id="fe0b8924-2c62-4fb4-9f1a-14568a4cbe8f" name="commonsFlow|Success_Response" />
+		<async doc:name="Async" doc:id="730685ab-f985-4027-aca2-866a3d4ee4d6" >
+			<set-variable value="1" doc:name="in" doc:id="2c05c1db-5d0a-48fb-b7b9-c6862cac392e" variableName="in"/>
+			<flow-ref doc:name="commonsFlow|SendEmailNotif" doc:id="6469b563-82a4-4da7-9d1d-c115aef119e0" name="commonsFlow|SendEmailNotif" />
+		</async>
+	</flow>
+	<flow name="student_implemFlow_image" doc:id="3d145540-cc44-42ee-8147-f7b495905a71" >
+		<ee:transform doc:name="image_code" doc:id="baaed5a6-5ca0-4956-b166-6825b71fbde1" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+payload.imageBlob as Array]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="imageCode" ><![CDATA[%dw 2.0
+output application/java
+---
+payload.imageCode]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<try doc:name="Try" doc:id="6bf90840-daf3-469e-9f5c-5dd09fcbfcff" >
+			<file:create-directory doc:name="Create directory" doc:id="24a34def-c3ef-4014-93d4-cc6b89e120a2" config-ref="File_Config" directoryPath="#['$(p('db.image.path'))/Images']" />
+			<error-handler >
+				<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="d35f69a7-8fdd-4efa-9272-b3e079ea9db1" >
+					<logger level="INFO" doc:name="file_already_exist" doc:id="1b9a932d-5c15-44d3-b518-4f38194c1cc8" message="Proceeding to delete existing file" />
+				</on-error-continue>
+			</error-handler>
+		</try>
+		<try doc:name="Try" doc:id="58cae3cb-55c7-410d-b247-a684057a6921" >
+			<file:delete doc:name="Delete" doc:id="da671884-286b-4f2f-b386-1ef030ef8001" config-ref="File_Config" path="#['$(p('db.image.path'))/Images/' ++ vars.imageCode as String]" />
+			<error-handler >
+				<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="6b85b326-e927-4ac9-bb17-f820fb88105f" >
+					<logger level="INFO" doc:name="file_not_exist" doc:id="57a67c11-a81f-4d16-8d02-6ec1899f03a3" message="Proceeding to write the file" />
+				</on-error-continue>
+			</error-handler>
+		</try>
+		<batch:job jobName="student_implemBatch_Job" doc:id="6cea3d65-132d-4da0-a727-faa88b1e666c" >
+			<batch:process-records >
+				<batch:step name="Batch_Step" doc:id="b5e1eca3-84e5-4967-8e93-df47b8dabfaf" >
+					<ee:transform doc:name="convert_string_to_binary" doc:id="053871a6-6543-49eb-a456-3d6ea3adbb88" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+import replaceAll from dw::core::Strings
+import fromBase64 from dw::core::Binaries
+output application/octet-stream
+var imgBlob = replaceAll(payload, 'data:image/jpeg;base64,' , '')
+---
+fromBase64(payload)]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+					<set-payload value="#[payload]" doc:name="Set Payload" doc:id="06dedfd9-965e-429e-b844-aa7abfb4f2a1" mimeType="image/jpeg" />
+					<file:write doc:name="Write" doc:id="be924d96-9140-496c-a47f-21c8a45c02e8" config-ref="File_Config" path="#['$(p('db.image.path'))/Images/' ++ vars.imageCode as String ++ '/' ++ uuid() ++ '.jpg']" />
+				</batch:step>
+			</batch:process-records>
+			<batch:on-complete >
+				<logger level="INFO" doc:name="Logger" doc:id="fd43708c-6a91-4936-9e89-00888c0d49ba" message="#[%dw 2.0&#10;output application/json&#10;---&#10;{&#10;	'successRecords' : payload.successfulRecords,&#10;	'failedRecords' : payload.failedRecords&#10;}]" />
+			</batch:on-complete>
+		</batch:job>
+		<flow-ref doc:name="commonsFlow|Success_Response" doc:id="f60d6314-ac85-4f8e-9a13-2c734a56329c" name="commonsFlow|Success_Response" />
+	</flow>
+	<flow name="student_implemFlow_read_image" doc:id="d66f615a-f72d-4606-ad52-6e153e6eb02e" >
+		<try doc:name="Try" doc:id="e6db6829-23d7-4ea5-97dc-89687256865d" >
+			<file:list doc:name="List" doc:id="fd288a3c-281b-473f-931e-b67abef4f765" config-ref="File_Config" directoryPath="#['$(p('db.image.path'))/Images/' ++ vars.imageCode]" target="matchedFiles" >
+				<file:matcher filenamePattern="*.jpg" />
+			</file:list>
+			<error-handler >
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="f0f98e94-b705-44db-a09e-d70408def7b5" >
+					<logger level="INFO" doc:name="Not found" doc:id="798d04fd-b637-4133-bb02-856a951d6990" message="#['The images of $(vars.imageCode) is not found']" />
+					<!-- [STUDIO:"Update"]<db:update doc:name="Update" doc:id="8a475f43-e362-42d0-beb2-0fa84b139bde" config-ref="Database_Config" >
+						<db:sql ><![CDATA[UPDATE `caa`.`stdinf`
+SET
+`faceRegStatus` ='!reg!'
+WHERE `studentId` = :imageCode;&#93;&#93;></db:sql>
+						<db:input-parameters ><![CDATA[#[%dw 2.0
+import substringBefore from dw::core::Strings
+output application/json
+&#45;&#45;-
+{
+    imageCode: substringBefore(vars.imageCode, '-')
+}&#93;&#93;&#93;></db:input-parameters>
+					</db:update> [STUDIO] -->
+				</on-error-propagate>
+			</error-handler>
+		</try>
+		<logger level="INFO" doc:name="available_images" doc:id="319ad898-bcb0-44db-8010-5ea24540c4c8" message="#[%dw 2.0&#10;output application/json&#10;---&#10;vars.matchedFiles.attributes.name]" />
+		<ee:transform doc:name="encode to base6" doc:id="9ea5a47b-ed93-4da9-ab94-4dc4e132c524" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{ 
+	"imageCode": vars.imageCode,
+	"imageBlob": vars.matchedFiles.attributes.name map ((item, index) -> lookup('student_implemFlow_read_image|toBase64', item))
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="student_implemFlow_read_image|toBase64" doc:id="85354ea0-d0e7-4027-83ad-dcb04c2282ae" >
+		<file:read doc:name="Read" doc:id="b3fef02f-660f-4f15-99ae-d8f649c0dd77" config-ref="File_Config" path="#['$(p('db.image.path'))/Images/' ++ vars.imageCode ++ '/' ++ payload]" outputMimeType="application/octet-stream" />
+		<ee:transform doc:name="toBase6" doc:id="134d71ce-fb9d-420c-bbb1-e438fce39646" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+dw::core::Binaries::toBase64(payload)]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="student_implemFlow|read-student-image-code" doc:id="0f7dec44-293f-4a53-a352-5d58ee7a212c" >
+		<flow-ref doc:name="get:\student:student_attendance_raml-config" doc:id="8a2af39e-4fd6-466e-8ef0-76b528149cbc" name="get:\student:student_attendance_raml-config" />
+		<ee:transform doc:name="getImageDetails" doc:id="f190e42b-dacf-41b4-b0a9-8f7932d1939d" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+var genImageCode = (if(payload is Array) payload else [payload]) map ((value, index) -> "imageCode": value.id ++ '~' ++ value.name )
+---
+genImageCode.imageCode map ((value, index) -> lookup('student_implemFlow|read-student-image-name', value))]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="student_implemFlow|read-student-image-name" doc:id="b04ea535-6100-4899-ad4a-78442492acd2" >
+		<try doc:name="Try" doc:id="0dcf2580-e453-4144-9619-1abd0e74b4b1" >
+			<file:list doc:name="List" doc:id="820ab3a0-2be6-4ebf-919f-0682711e27eb" config-ref="File_Config" directoryPath="#['$(p('db.image.path'))/Images/' ++ payload]" target="matchedFiles" >
+				<file:matcher filenamePattern="*.jpg" />
+			</file:list>
+			<logger level="INFO" doc:name="Logger" doc:id="a66b5fca-9094-49a2-b8ec-19f318ab9e8e" message="#[%dw 2.0&#10;output application/json&#10;---&#10;vars.matchedFiles.name]" />
+			<ee:transform doc:name="Image details" doc:id="2ff30138-ffae-49de-a5c2-697092d898e6" >
+				<ee:message >
+					<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+{
+	"imageCode": payload,
+	"imagesName": vars.matchedFiles.attributes.fileName
+}]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+			<error-handler >
+				<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="95ba3f96-a089-4057-bc3c-39a43b1cfb78" >
+					<logger level="INFO" doc:name="No image found" doc:id="720f97e7-7814-4ff6-91c9-ee50993ef502" message="No image found for #[payload]" />
+				</on-error-continue>
+			</error-handler>
+		</try>
+	</flow>
+	<flow name="attendance_implementationFlow|user_validation" doc:id="16789a19-8c49-4e13-8417-af5b1813be8a" >
+		<flow-ref doc:name="commonsFlow|ReadFromDB" doc:id="22234d3c-e746-4f6e-8be1-7fb3a0f1a37f" name="commonsFlow|ReadFromDB" />
+		<flow-ref doc:name="commonsFlow|toJson" doc:id="d0e57624-4e3c-4cb6-a039-254c72ad332b" name="commonsFlow|toJson"/>
+		<logger level="INFO" doc:name="Logger" doc:id="878ea40f-edff-4d65-b49e-0a7e0c07ccd3" message="#[payload]"/>
+		<validation:is-not-null doc:name="Is not null" doc:id="b935fa48-0f7b-4e73-a9ef-38386a7c3cc1" value="#[payload]" message="User not found"/>
+		<flow-ref doc:name="commonsFlow|toJson" doc:id="be916d18-086b-40df-96e6-21186bc0328d" name="commonsFlow|toJson"/>
+	</flow>
+	<flow name="attendance_implementationFlow|update_attendance" doc:id="7780bab9-352c-415c-91ff-5c88f5ab8fbf" >
+		<flow-ref doc:name="commonsFlow|read_student_todays_attendance" doc:id="245c9308-3d4a-42c9-b134-d85b5d557eda" name="commonsFlow|read_student_todays_attendance"/>
+		<validation:is-not-null doc:name="Is not null" doc:id="3f23ed5c-0f3b-4fb1-8810-ad9fb607c999" value="#[payload]" message="Should log in first"/>
+		<set-variable value="#[payload.in_time]" doc:name="in_time" doc:id="45441552-ce05-42db-bc98-10f2c301a2b1" variableName="in_time"/>
+		<set-variable value="${db.queries.patch_attendance}" doc:name="query" doc:id="274023ed-9246-4562-a921-165ecaf8e6d1" variableName="query" />
+		<ee:transform doc:name="Transform Message" doc:id="760161ec-e164-4675-b822-e2231c94aa2b" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+var dateTime = now() as String {format: 'yyyy-MM-dd hh:mm:ss a'}
+---
+{
+	'record_no': payload.record_no,
+	'id': payload.id,
+	'out': dateTime,
+	'class_id': vars.attendance_details.class_id
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<flow-ref doc:name="commonsFlow|UpdateDataInDB" doc:id="69b5f9ce-6ab2-4465-bdfd-4c48ec9a3100" name="commonsFlow|UpdateDataInDB"/>
+		<flow-ref doc:name="commonsFlow|Success_Response" doc:id="b7569659-5322-4e97-954d-f39dba41d0cb" name="commonsFlow|Success_Response"/>
+		<async doc:name="Async" doc:id="982b479f-2a59-41b8-b4f0-2f77ac5a7568" >
+			<set-variable value="1" doc:name="out" doc:id="2540b82d-15a8-4fb4-a95c-a4f7b84fade3" variableName="out"/>
+			<flow-ref doc:name="commonsFlow|SendEmailNotif" doc:id="559686bf-16cd-4918-99e6-64e701b64d37" name="commonsFlow|SendEmailNotif" />
+		</async>
+	</flow>
+</mule>

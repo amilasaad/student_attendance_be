@@ -1,0 +1,327 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:tls="http://www.mulesoft.org/schema/mule/tls" xmlns:email="http://www.mulesoft.org/schema/mule/email"
+	xmlns:file="http://www.mulesoft.org/schema/mule/file"
+	xmlns:validation="http://www.mulesoft.org/schema/mule/validation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.mulesoft.org/schema/mule/email http://www.mulesoft.org/schema/mule/email/current/mule-email.xsd
+http://www.mulesoft.org/schema/mule/tls http://www.mulesoft.org/schema/mule/tls/current/mule-tls.xsd">
+	<configuration-properties doc:name="Configuration properties" doc:id="6ab6c165-120c-42ac-bcac-a26a4e01696d" file="configs/config-${env}-conn.yaml" />
+	<global-property doc:name="Global Property" doc:id="6e172791-9f6d-4166-ba76-7437e20fd01a" name="env" value="lcl" />
+	<email:smtp-config name="Email_SMTP" doc:name="Email SMTP" doc:id="0deb2210-aa08-453a-b855-c2040c4ada19" >
+		<email:smtps-connection host="smtp.gmail.com" user="amilbangsasaad@gmail.com" password="hazc yhjx bbrv onit" >
+			<tls:context >
+				<tls:trust-store insecure="true" />
+			</tls:context>
+		</email:smtps-connection>
+	</email:smtp-config>
+	<global-property doc:name="Global Property" doc:id="95afed79-4f08-4d68-b699-b57318b44af4" name="mail.smtp.starttls.enable" value="true" />
+	<flow name="commonsFlow|Insert2DB" doc:id="3f1beb48-e691-4940-a0e6-3a820fcc4766" >
+		<db:insert doc:name="Insert" doc:id="9b3a1e29-5948-458c-9baa-226c6653962f" config-ref="Database_Config">
+			<db:sql ><![CDATA[#[vars.query]]]></db:sql>
+			<db:input-parameters ><![CDATA[#[payload]]]></db:input-parameters>
+		</db:insert>
+	</flow>
+	<db:config name="Database_Config" doc:name="Database Config" doc:id="264c8f05-3da8-4a1b-8a56-4769ca96bc2a" >
+		<db:my-sql-connection host="${db.host}" port="${db.port}" user="${db.username}" password="${db.password}" database="${db.dbname}" />
+	</db:config>
+	<flow name="commonsFlow|ReadFromDB" doc:id="428e7108-a8e1-4424-b94f-b9594c677a0e" >
+		<db:select doc:name="Select" doc:id="5a66b112-a271-4f33-8495-d140baa869f9" config-ref="Database_Config">
+			<db:sql ><![CDATA[#[vars.query]]]></db:sql>
+			<db:input-parameters ><![CDATA[#[%dw 2.0
+output application/java
+---
+if(sizeOf(payload) > 0) payload else {}]]]></db:input-parameters>
+		</db:select>
+	</flow>
+	<flow name="commonsFlow|UpdateDataInDB" doc:id="de427fe7-5c56-4bd8-b5a7-34aa24fb83fb" >
+		<db:update doc:name="Update" doc:id="2f4b87b2-3131-4e0f-a3dc-1f795452bba9" config-ref="Database_Config">
+			<db:sql ><![CDATA[#[vars.query]]]></db:sql>
+			<db:input-parameters ><![CDATA[#[%dw 2.0
+output application/java
+---
+if(sizeOf(payload) > 0) payload else {}]]]></db:input-parameters>
+		</db:update>
+	</flow>
+	<flow name="commonsFlow|DeleteDataFromDB" doc:id="17c32151-2141-4c87-be1c-6b19ce605f5d" >
+		<db:delete doc:name="Delete" doc:id="f0078c45-90d3-4fc5-b5df-7ce3980a6b72" config-ref="Database_Config">
+			<db:sql ><![CDATA[#[vars.query]]]></db:sql>
+			<db:input-parameters ><![CDATA[#[%dw 2.0
+output application/java
+---
+if(sizeOf(payload) > 0) payload else {}]]]></db:input-parameters>
+		</db:delete>
+	</flow>
+	<flow name="commonsFlow|Success_Response" doc:id="6704fdfb-68c0-45ac-8bb9-e1af5e4cbc68" >
+		<ee:transform doc:name="prepare success response" doc:id="95b76693-b35c-4363-bd97-f7cfabe43c2f" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	message: 'success'
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="commonsFlow|toJson" doc:id="f7ce7001-7c04-404e-baf5-44622d0c3af8" >
+		<ee:transform doc:name="convert to json" doc:id="44d81491-0d5d-465d-be62-b0044471b9e1" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+if(sizeOf(payload) > 1) payload else payload[0]]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="commonsFlow|insert" doc:id="52f47e46-582e-4f51-91a8-ce35c5e718cb" >
+		<flow-ref doc:name="commonsFlow|Insert2DB" doc:id="04a5c987-f1ad-4b60-8c8f-7c9f51efc75e" name="commonsFlow|Insert2DB" />
+		<flow-ref doc:name="commonsFlow|Response" doc:id="e50f524d-a945-4acc-95ad-14d84926be4b" name="commonsFlow|Success_Response" />
+	</flow>
+	<flow name="commonsFlow|read_student_todays_attendance" doc:id="1ff836f7-ca83-475f-bb39-32223a1e7220" >
+		<set-variable value="${db.queries.get_attendance_of}" doc:name="query" doc:id="34df73bd-836d-4919-aebc-29253dcfb3e1" variableName="query" />
+		<!-- [STUDIO:"Transform Message"]<ee:transform doc:name="Transform Message" doc:id="3a3a948f-aeef-4401-8f88-19bcf33c1d86" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+&#45;&#45;-
+{
+	'id': vars.id
+}&#93;&#93;></ee:set-payload>
+			</ee:message>
+		</ee:transform> [STUDIO] -->
+		<set-payload value="#[%dw 2.0&#10;output application/json&#10;---&#10;{&#10;	'student_id': vars.id default attributes.uriParams.id,&#10;	'class_id': attributes.queryParams.class_id default (vars.inboundPayload.class_id default payload.class_id)&#10;}]" doc:name="Set Payload" doc:id="0bd485ca-5820-4628-bbc8-5b31c204a178" />
+		<set-variable value="#[payload]" doc:name="attendance_details" doc:id="2a28e98a-4953-4e61-a385-df93e9d3c0fa" variableName="attendance_details"/>
+		<logger level="INFO" doc:name="Logger" doc:id="8a6f5bad-eb5b-4468-ad23-9561ac4de8f6" message="#[payload]"/>
+		<flow-ref doc:name="commonsFlow|ReadFromDB" doc:id="0d0fa4fe-2e4f-4b23-bc6e-8880db3b6b6b" name="commonsFlow|ReadFromDB" />
+		<flow-ref doc:name="commonsFlow|toJson" doc:id="bbe91726-90a2-46a0-9f73-4e26853c7317" name="commonsFlow|toJson" />
+	</flow>
+	<flow name="commonsFlow|read" doc:id="94f27420-abd0-4865-a49c-3baa733d8776" >
+		<flow-ref doc:name="commonsFlow|ReadFromDB" doc:id="aab50d3b-753b-4dd4-9f94-608795d4714a" name="commonsFlow|ReadFromDB"/>
+		<validation:is-true doc:name="Is true" doc:id="8438182c-1aca-47b8-a129-347ed96a60b3" expression="#[sizeOf(payload) &gt; 0]" message="Failed to fetch requested data."/>
+		<flow-ref doc:name="commonsFlow|toJson" doc:id="74aadca0-f732-4676-829c-23e0184b8445" name="commonsFlow|toJson" />
+		<ee:transform doc:name="toArray" doc:id="cc9f0415-deae-4bb7-939f-db045846acb6" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+if(payload is Array) payload else [payload]]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="attendance_implementationFlow|read_by_key" doc:id="7c2a6a7e-170e-4a0f-8080-1dfbaf75ac08" >
+		<ee:transform doc:name="prepare payload" doc:id="c9497319-4e6a-42dd-a7ee-7ec05d128446" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	'key': attributes.uriParams.'id' default (vars.id default vars.attendance_details.student_id)
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<flow-ref doc:name="commonsFlow|ReadFromDB" doc:id="5c5e0f80-6175-4582-9065-1cbbc65a94a2" name="commonsFlow|ReadFromDB" />
+		<validation:is-true doc:name="Is true" doc:id="123d887e-21bd-48d4-b496-c11b7bbec946" expression="#[sizeOf(payload) &gt; 0]" message="Failed to fetch requested data." />
+		<flow-ref doc:name="commonsFlow|toJson" doc:id="426d8aed-529f-41ff-92b9-959dc50f35b4" name="commonsFlow|toJson" />
+	</flow>
+	<flow name="attendance_implementationFlow|delete_by_key" doc:id="26996ade-5855-4cc1-aa4c-4837d8d1a05d" >
+		<set-variable value="#[p('db.queries.get_$(vars.toBeDeleted)')]" doc:name="query" doc:id="cb37d381-b32d-4cd4-913d-025731df495c" variableName="query" />
+		<ee:transform doc:name="create variable key and record_no" doc:id="119fc1e0-cdba-4191-b3e7-f81b593c63f1">
+			<ee:message>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="key" ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	'key': attributes.uriParams.'id'
+}]]></ee:set-variable>
+				<ee:set-variable variableName="record_no" ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	'key': attributes.queryParams.'record-no' default ''
+}]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<flow-ref doc:name="attendance_implementationFlow|read_by_key" doc:id="337cf24a-5129-40cb-8637-bbb46a6ae9f0" name="attendance_implementationFlow|read_by_key"/>
+		<set-variable value="#[p('db.queries.del_$(vars.toBeDeleted)')]" doc:name="query2" doc:id="58701d93-3c44-457e-ad52-2a320b1796ec" variableName="query" />
+		<choice doc:name="Choice" doc:id="8660522e-cac7-47d5-aa70-11839c424309" >
+			<when expression="#[sizeOf(vars.record_no.key) &gt; 0]">
+				<try doc:name="Try" doc:id="f78b42c0-1576-4529-84bd-59822aaccfd5" >
+					<remove-variable doc:name="key" doc:id="a0ca38e2-c5d8-4f3f-b30a-210beb1840b8" variableName="key"/>
+					<error-handler >
+						<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="6566cdfb-7653-4b2d-835e-972156dc47d7" >
+							<logger level="INFO" doc:name="variable 'key' is not existing." doc:id="50739906-ebe9-454f-a69a-e7ee3d20dbf6" message="Variable 'key' is not existing."/>
+						</on-error-continue>
+					</error-handler>
+				</try>
+				<set-variable value="#[vars.record_no]" doc:name="key" doc:id="e5747b57-2b76-4ebe-acdd-4984ac507298" variableName="key"/>
+				<try doc:name="Try" doc:id="c1f729d5-4f5c-44b8-99a3-0d2cb2caf8e6" >
+					<remove-variable doc:name="record_no" doc:id="e259bd9a-1412-47fa-a9eb-3a50632791ef" variableName="record_no" />
+					<error-handler >
+						<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="cb92134e-855b-43db-979b-27622a583664" >
+							<logger level="INFO" doc:name="variable 'record_no' is not existing." doc:id="7f4a4345-2645-488c-bc65-fe818b795e5f" message="Variable 'record_no' is not existing." />
+						</on-error-continue>
+					</error-handler>
+				</try>
+			</when>
+		</choice>
+		<try doc:name="Try" doc:id="cdd9db82-3807-4cc7-8419-cdb114052cb6">
+			<file:delete doc:name="facial data" doc:id="c2227ad6-a3a1-4c2f-9f2d-e60b912d15bc" path="#['$(p('db.image.path'))/Images/$(payload.id)~$(payload.name)']" />
+			<error-handler>
+				<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="f43eb1b6-842a-4bb7-b6ba-e231a0ce2b3a">
+					<logger level="INFO" doc:name="failed to delete" doc:id="f67dd684-b409-4e73-81fa-ba8b379a1331" message="failed to delete student data details" />
+				</on-error-continue>
+			</error-handler>
+		</try>
+		<set-payload value="#[vars.key]" doc:name="vars.key" doc:id="60aaf78b-2e7a-4822-a140-bb97f4042148" />
+		<try doc:name="Try" doc:id="6358e612-be46-45ac-ad07-c84be222afba">
+			<flow-ref doc:name="commonsFlow|DeleteDataFromDB" doc:id="9ae50676-8ceb-48cb-afd9-4a53b39ac8ed" name="commonsFlow|DeleteDataFromDB" />
+			<error-handler>
+				<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="c81c7414-e1be-4386-abd5-51419332c5f9">
+					<try doc:name="Try" doc:id="f1f461ed-ce73-4673-8fd7-6faff00c6578" >
+						<db:execute-ddl doc:name="SET SQL_SAFE_UPDATES = 0" doc:id="da0c1f78-c67e-49e3-9715-a866509b205f" config-ref="Database_Config">
+				<db:sql><![CDATA[SET SQL_SAFE_UPDATES = 0;]]></db:sql>
+			</db:execute-ddl>
+						<flow-ref doc:name="commonsFlow|DeleteDataFromDB" doc:id="d3781347-7c63-48ba-801e-f51e2be1e184" name="commonsFlow|DeleteDataFromDB" />
+						<db:execute-ddl doc:name="SET SQL_SAFE_UPDATES = 1" doc:id="91161293-0af0-46aa-9c36-7c2d018f6175">
+				<db:sql><![CDATA[SET SQL_SAFE_UPDATES = 1;]]></db:sql>
+			</db:execute-ddl>
+						<error-handler >
+							<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="94a4edde-cf99-410a-8791-3358350b75c2" >
+								<logger level="INFO" doc:name="failed to delete" doc:id="0502004e-e798-4459-86be-d68c231bd669" message="failed to delete" />
+							</on-error-continue>
+						</error-handler>
+					</try>
+				</on-error-continue>
+			</error-handler>
+		</try>
+		<validation:is-true doc:name="Is true" doc:id="7f3ddd95-ecc4-4e6b-a74d-1839ccb5cef6" expression="#[sizeOf(payload) &gt; 0 and payload != 0]" message="Failed to fetch requested data." />
+		<flow-ref doc:name="commonsFlow|Success_Response" doc:id="f7830a6d-ff5b-48a9-9e92-76c17a01ec7b" name="commonsFlow|Success_Response" />
+	</flow>
+	<flow name="attendance_implementationFlow|update_by_key" doc:id="7f6619b5-45f4-478d-b3a3-4712d93a4c97" >
+		<set-variable value="#[p('db.queries.get_$(vars.toBeDeleted)')]" doc:name="get query" doc:id="a9270010-ccb6-4773-9eda-6d635ef3ab5d" variableName="query" />
+		<ee:transform doc:name="create variable key and inbound" doc:id="27597a4a-c5fd-41af-ba0d-c72f44a62427" >
+			<ee:message />
+			<ee:variables >
+				<ee:set-variable variableName="key" ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	'key': attributes.uriParams.'id'
+}]]></ee:set-variable>
+				<ee:set-variable variableName="inbound" ><![CDATA[%dw 2.0
+output application/java
+---
+payload]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<flow-ref doc:name="attendance_implementationFlow|read_by_key" doc:id="521aab81-86fb-4cee-9e41-085a3a4852da" name="attendance_implementationFlow|read_by_key" />
+		<set-variable value="#[p('db.queries.update_$(vars.toBeDeleted)')]" doc:name="update query" doc:id="25b06804-9b87-4c4b-9c8e-86c68d6661eb" variableName="query" />
+		<choice doc:name="Choice" doc:id="0bf48af4-60fa-42e0-9b18-58b33fe7dfc4" >
+			<when expression="#[vars.toBeDeleted ~= 'student']">
+				<ee:transform doc:name="prepare payload student" doc:id="5b948e10-4548-4f7b-afdf-b2f22977177c">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+import * from dwl::update_student
+output application/json
+---
+main({payload: payload, attributes: message.attributes, vars: vars})]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+			</when>
+			<when expression="#[vars.toBeDeleted ~= 'user']">
+				<ee:transform doc:name="prepare payload user" doc:id="c3b48fb1-271a-4d36-b36f-aabd4ae16587">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+import * from dwl::update_user
+output application/json
+---
+main({payload: payload, attributes: message.attributes, vars: vars})]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<when expression="#[vars.toBeDeleted ~= 'attendance']">
+				<ee:transform doc:name="prepare payload attendance" doc:id="0824e81f-255e-400e-828d-607eb77e1bd8">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+import * from dwl::update_attendance
+output application/json
+---
+main({payload: payload, attributes: message.attributes, vars: vars})]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<when expression="#[vars.toBeDeleted ~= 'class']">
+				<ee:transform doc:name="prepare payload class" doc:id="139a0cac-42f2-49f3-83ee-b50be073f76a" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+  "ID": vars.key.key,
+  "subject": vars.inbound.subject,
+  "class_period": vars.inbound.class_period
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<logger level="INFO" doc:name="Logger" doc:id="1e51d5bf-3f48-4a34-8f35-a88131934452" message="#[payload]"/>
+			</when>
+		</choice>
+		<flow-ref doc:name="commonsFlow|UpdateDataInDB" doc:id="3e01b82c-82ed-4b65-afb0-0537c39568ac" name="commonsFlow|UpdateDataInDB" />
+		<validation:is-true doc:name="Is true" doc:id="b96f7669-cadd-4292-97a0-150cb5708c95" expression="#[sizeOf(payload) &gt; 0 and payload.affectedRows != 0]" message="Failed to fetch requested data." />
+		<flow-ref doc:name="commonsFlow|Success_Response" doc:id="58fe2864-621f-4ae2-a1e6-142238d536d0" name="commonsFlow|Success_Response" />
+	</flow>
+	<flow name="commonsFlow|SendEmailNotif" doc:id="4e725dcd-d2d4-4c03-b773-0f438558964c" >
+		<logger level="INFO" doc:name="commonsFlow|SendEmailNotif|Entry" doc:id="1c55c04e-3a8c-485f-a851-1f38df0473c1" message="commonsFlow|SendEmailNotif|Entry"/>
+		<flow-ref doc:name="get:\student\(id):student_attendance_raml-config" doc:id="40d0917d-ebf0-40cd-9575-3eb75041d2a0" name="get:\student\(id):student_attendance_raml-config"/>
+		<ee:transform doc:name="prepare email body" doc:id="5beecb61-0ef6-43cc-932d-b28b013b660e" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+var dateTime = now() as String {format: 'yyyy-MM-dd hh:mm:ss a'}
+---
+{
+  "toEmailAddress": payload.address,
+  "studentName": payload.name,
+  "subject": vars.inboundPayload.class_id default vars.attendance_details.class_id,
+  "timeIn":  if(vars.in ~= '1') dateTime else ((now() as String {format: 'yyyy-MM-dd '}) ++ vars.in_time default '-'),
+  "timeOut": if(vars.out ~= '1') dateTime else 'Ongoing'
+}]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+			</ee:variables>
+		</ee:transform>
+		<logger level="INFO" doc:name="payload" doc:id="35f416ed-494e-4893-88fa-ae26d688a65a" message="Email Details #[payload]"/>
+		<ee:transform doc:name="prepare email message" doc:id="d3f1d46d-5a49-4df9-aebd-1f76fed4bcbb">
+			<ee:message>
+			</ee:message>
+			<ee:variables>
+				<ee:set-variable variableName="emailBody"><![CDATA[%dw 2.0
+output text/plain
+---
+"Dear Parent/Guardian,\n\n" ++
+"This is to inform you that " ++ payload.studentName ++ "'s attendance has been successfully recorded for the subject: " ++ payload.subject ++ ".\n\n" ++
+"Details:\n" ++
+" - Arrival: " ++ payload.timeIn ++ "\n" ++
+" - Departure: " ++ payload.timeOut ++ "\n\n" ++
+"If you have any questions regarding this record, please contact the school office.\n\n" ++
+"Best regards,\n" ++
+"School Administration"]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<logger level="INFO" doc:name="payload" doc:id="7b433a1c-fc99-4cba-89f1-696657d3110f" message="Email Message #[vars.emailBody]" />
+		<email:send doc:name="Send" doc:id="7017c37b-4fdd-4b64-a2cc-1409a0d4e6bd" config-ref="Email_SMTP" fromAddress="amilbangsasaad@gmail.com" toAddresses="#[[payload.toEmailAddress]]" subject="School Attendance Notification">
+			<email:cc-addresses />
+			<email:bcc-addresses />
+			<email:body contentType="text/plain">
+				<email:content ><![CDATA[#[write(vars.emailBody, 'application/java')]]]></email:content>
+			</email:body>
+		</email:send>
+		<logger level="INFO" doc:name="commonsFlow|SendEmailNotif|End" doc:id="c3531c31-c277-4059-a1ae-bf81bebba7c8" message="commonsFlow|SendEmailNotif|End" />
+	</flow>
+</mule>

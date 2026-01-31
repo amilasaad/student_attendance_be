@@ -1,0 +1,366 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd ">
+    <apikit:config name="student_attendance_raml-config" api="student_attendance_raml.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
+    <http:listener-config name="student_attendance_raml-httpListenerConfig" basePath="${http.basePath}">
+        <http:listener-connection host="${http.host}" port="${http.port}" readTimeout="${http.readTimeout}" />
+        <http:listener-interceptors>
+            <http:cors-interceptor>
+                <http:origins>
+                    <http:public-resource />
+                </http:origins>
+            </http:cors-interceptor>
+        </http:listener-interceptors>
+    </http:listener-config>
+    <flow name="student_attendance_raml-main">
+        <http:listener config-ref="student_attendance_raml-httpListenerConfig" path="/*">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers><![CDATA[#[vars.outboundHeaders default {}]]]></http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body><![CDATA[#[payload]]]></http:body>
+                <http:headers><![CDATA[#[vars.outboundHeaders default {}]]]></http:headers>
+            </http:error-response>
+        </http:listener>
+        <apikit:router config-ref="student_attendance_raml-config" />
+        <error-handler>
+            <on-error-propagate type="APIKIT:BAD_REQUEST">
+                <ee:transform doc:name="Transform Message">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Bad request"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">400</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_FOUND">
+                <ee:transform doc:name="Transform Message">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Resource not found"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">404</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:METHOD_NOT_ALLOWED">
+                <ee:transform doc:name="Transform Message">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Method not allowed"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">405</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_ACCEPTABLE">
+                <ee:transform doc:name="Transform Message">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Not acceptable"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">406</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:UNSUPPORTED_MEDIA_TYPE">
+                <ee:transform doc:name="Transform Message">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Unsupported media type"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">415</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_IMPLEMENTED">
+                <ee:transform doc:name="Transform Message">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Not Implemented"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">501</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+        </error-handler>
+    </flow>
+    <flow name="student_attendance_raml-console">
+        <http:listener config-ref="student_attendance_raml-httpListenerConfig" path="/console/*">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body>#[payload]</http:body>
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:error-response>
+        </http:listener>
+        <apikit:console config-ref="student_attendance_raml-config" />
+        <error-handler>
+            <on-error-propagate type="APIKIT:NOT_FOUND">
+                <ee:transform doc:name="Transform Message">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Resource not found"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">404</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+        </error-handler>
+    </flow>
+    <flow name="put:\student\(id):application\json:student_attendance_raml-config">
+        <logger level="INFO" message="put:\student\(id):application\json:student_attendance_raml-config|Start" doc:name="put:\student\(id):application\json:student_attendance_raml-config|Start" />
+        <set-variable value="student" doc:name="toBeDeleted" doc:id="9ba74fb3-f86a-438c-b2f3-fab68f6c12f1" variableName="toBeDeleted" />
+        <flow-ref doc:name="attendance_implementationFlow|update_by_key" doc:id="5674203c-fde6-4b55-b779-a41b4c59b852" name="attendance_implementationFlow|update_by_key" />
+        <logger level="INFO" doc:name="put:\student\(id):application\json:student_attendance_raml-config|End" doc:id="4a7bede2-86d9-426b-9b90-b72730dc3042" message="put:\student\(id):application\json:student_attendance_raml-config|End" />
+    </flow>
+    <flow name="put:\user\(id):application\json:student_attendance_raml-config">
+        <logger level="INFO" message="put:\user\(id):application\json:student_attendance_raml-config|Start" doc:name="put:\user\(id):application\json:student_attendance_raml-config|Start" />
+        <set-variable value="user" doc:name="toBeDeleted" doc:id="f980cdec-e6fd-4c09-a5bf-58ea3eed0722" variableName="toBeDeleted" />
+        <flow-ref doc:name="attendance_implementationFlow|update_by_key" doc:id="9b9cc01c-dbf8-4ac2-9ef3-4e2ff661ee6c" name="attendance_implementationFlow|update_by_key" />
+        <logger level="INFO" doc:name="put:\user\(id):application\json:student_attendance_raml-config|End" doc:id="c57853ed-f297-422b-901e-da165816a388" message="put:\user\(id):application\json:student_attendance_raml-config|End" />
+    </flow>
+    <flow name="put:\attendance\(id):application\json:student_attendance_raml-config">
+        <logger level="INFO" message="put:\attendance\(id):application\json:student_attendance_raml-config|Start" doc:name="put:\attendance\(id):application\json:student_attendance_raml-config|Start" />
+        <set-variable value="attendance" doc:name="toBeDeleted" doc:id="3b53edfd-193d-4ae6-abeb-4dc7ce4564ce" variableName="toBeDeleted" />
+        <flow-ref doc:name="attendance_implementationFlow|update_by_key" doc:id="00d1f364-d08e-4386-9f45-83e73353b537" name="attendance_implementationFlow|update_by_key" />
+        <logger level="INFO" doc:name="put:\attendance\(id):application\json:student_attendance_raml-config|End" doc:id="c3ebc633-ceca-4087-97c0-710fd768c262" message="put:\attendance\(id):application\json:student_attendance_raml-config|End" />
+    </flow>
+    <flow name="delete:\student\(id):student_attendance_raml-config">
+        <logger level="INFO" doc:name="delete:\student\(id):student_attendance_raml-config|Start" doc:id="fdafabf5-6d71-48c3-981f-10bf9a8fe2f1" message="delete:\student\(id):student_attendance_raml-config|Start" />
+        <set-variable value="student" doc:name="toBeDeleted" doc:id="d11ef214-6ddd-451c-8b80-af4db101b045" variableName="toBeDeleted" />
+        <flow-ref doc:name="attendance_implementationFlow|delete_by_key" doc:id="5be43beb-5fe6-42a6-91d1-02fb02d49792" name="attendance_implementationFlow|delete_by_key" />
+        <logger level="INFO" doc:name="delete:\student\(id):student_attendance_raml-config|End" doc:id="766e8d5f-7495-4f03-8ab4-f9e3020230f9" message="delete:\student\(id):student_attendance_raml-config|End" />
+    </flow>
+    <flow name="delete:\user\(id):student_attendance_raml-config">
+        <logger level="INFO" doc:name="delete:\user\(id):student_attendance_raml-config|Start" doc:id="2b350ab8-0893-4a9c-a9b6-583dc8a4018c" message="delete:\user\(id):student_attendance_raml-config|Start" />
+        <set-variable value="user" doc:name="toBeDeleted" doc:id="0b8d3ba2-b8a8-41a9-9caf-a16c37d29a35" variableName="toBeDeleted" />
+        <flow-ref doc:name="attendance_implementationFlow|delete_by_key" doc:id="5632c90c-913c-4025-9708-4fe5425208ba" name="attendance_implementationFlow|delete_by_key" />
+        <logger level="INFO" doc:name="delete:\user\(id):student_attendance_raml-config|End" doc:id="ff46de8d-8744-4188-a319-73d60853fbba" message="delete:\user\(id):student_attendance_raml-config|End" />
+    </flow>
+    <flow name="delete:\attendance\(id):student_attendance_raml-config">
+        <logger level="INFO" doc:name="delete:\attendance\(id):student_attendance_raml-config|Start" doc:id="0bae2517-ce75-470b-b5c3-44bb01f61314" message="delete:\attendance\(id):student_attendance_raml-config|Start" />
+        <set-variable value="attendance_student" doc:name="toBeDeleted" doc:id="6e460dc9-fcf6-4066-9da4-81e00567ff8e" variableName="toBeDeleted" />
+        <flow-ref doc:name="attendance_implementationFlow|delete_by_key" doc:id="7ee5e68d-523b-45c1-9cfb-03e1b25b49fa" name="attendance_implementationFlow|delete_by_key" />
+        <logger level="INFO" doc:name="delete:\attendance\(id):student_attendance_raml-config|End" doc:id="b64fc683-bf5b-4ba7-9b2d-b3b40aa28504" message="delete:\attendance\(id):student_attendance_raml-config|End" />
+    </flow>
+    <flow name="patch:\user\validation:application\json:student_attendance_raml-config">
+        <logger level="INFO" message="patch:\user\validation:application\json:student_attendance_raml-config|Start" doc:name="patch:\user\validation:application\json:student_attendance_raml-config|Start" />
+        <set-variable value="${db.queries.get_userAccount}" doc:name="query" doc:id="3f14b03d-779d-4701-a269-9d18ff45194f" variableName="query" />
+        <flow-ref doc:name="attendance_implementationFlow|user_validation" doc:id="91fbf9e5-deb7-4f0a-8b13-3c415be7f3ca" name="attendance_implementationFlow|user_validation" />
+        <logger level="INFO" doc:name="patch:\user\validation:application\json:student_attendance_raml-config|End" doc:id="5e4f13db-54fa-48c9-837a-48afb4deb1c8" message="patch:\user\validation:application\json:student_attendance_raml-config|End" />
+    </flow>
+    <flow name="patch:\attendance\(id):application\json:student_attendance_raml-config">
+        <logger level="INFO" message="patch:\attendance\(id):application\json:student_attendance_raml-config|Start" doc:name="patch:\attendance\(id):application\json:student_attendance_raml-config|Start" />
+        <ee:transform doc:name="Transform Message">
+            <ee:variables>
+                <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <flow-ref doc:name="attendance_implementationFlow|update_attendance" doc:id="2f47a275-e6be-4ac4-8d2a-170cf26792c9" name="attendance_implementationFlow|update_attendance" />
+        <logger level="INFO" doc:name="patch:\attendance\(id):application\json:student_attendance_raml-config|End" doc:id="8d72cd94-45c8-48af-bf31-2d90c8a04dd7" message="patch:\attendance\(id):application\json:student_attendance_raml-config|End" />
+    </flow>
+    <flow name="patch:\user\(id):application\json:student_attendance_raml-config">
+        <ee:transform doc:name="Transform Message">
+            <ee:variables>
+                <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <logger level="INFO" message="patch:\user\(id):application\json:student_attendance_raml-config" />
+    </flow>
+    <flow name="patch:\student\(id):application\json:student_attendance_raml-config">
+        <ee:transform doc:name="Transform Message">
+            <ee:variables>
+                <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <logger level="INFO" message="patch:\student\(id):application\json:student_attendance_raml-config" />
+    </flow>
+    <flow name="get:\attendance:student_attendance_raml-config">
+        <logger level="INFO" message="get:\attendance:student_attendance_raml-config|Start" doc:name="get:\attendance:student_attendance_raml-config|Start" />
+        <set-variable value="${db.queries.get_all_attendance}" doc:name="query" doc:id="bf381a4a-07cf-41d3-ad07-cf38f1dfdcf8" variableName="query" />
+        <flow-ref doc:name="commonsFlow|read" doc:id="deee9ec6-c333-4f74-ac3b-cf38bbb60cc4" name="commonsFlow|read" />
+        <logger level="INFO" doc:name="get:\attendance:student_attendance_raml-config|End" doc:id="2486abd0-ed0f-46d3-9589-6fa73efa2c2c" message="get:\attendance:student_attendance_raml-config|End" />
+    </flow>
+    <flow name="get:\student\image:student_attendance_raml-config">
+        <logger level="INFO" message="get:\student\image:student_attendance_raml-config|Start" doc:name="get:\student\image:student_attendance_raml-config|Start" />
+        <flow-ref doc:name="student_implemFlow|read-student-image-code" doc:id="a039868f-2d84-484b-aed6-85ae826f6f53" name="student_implemFlow|read-student-image-code" />
+        <logger level="INFO" doc:name="get:\student\image:student_attendance_raml-config|End" doc:id="0473ce14-7e3b-42df-a6c3-c31c185096c8" message="get:\student\image:student_attendance_raml-config|End" />
+    </flow>
+    <flow name="get:\student:student_attendance_raml-config">
+        <logger level="INFO" message="get:\student:student_attendance_raml-config|Start" doc:name="get:\student:student_attendance_raml-config|Start" />
+        <set-variable value="${db.queries.get_all_student}" doc:name="query" doc:id="911dd40b-f7a4-41eb-84a6-662d8689656b" variableName="query" />
+        <flow-ref doc:name="commonsFlow|read" doc:id="9ec16d68-1ee2-43a1-a597-263734f8f3dc" name="commonsFlow|read" />
+        <logger level="INFO" doc:name="get:\student:student_attendance_raml-config|End" doc:id="1b6d7782-01b4-44e9-9b28-3ea17d08f0a5" message="get:\student:student_attendance_raml-config|End" />
+    </flow>
+    <flow name="get:\attendance\today:student_attendance_raml-config">
+        <logger level="INFO" message="get:\attendance\today:student_attendance_raml-config|Start" doc:name="get:\attendance\today:student_attendance_raml-config|Start" />
+		<ee:transform doc:name="prepare SQL parameters" doc:id="c8285d4a-3c8e-4363-8f77-e913828f2638" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+{
+	class_id: attributes.queryParams.'class_id'
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<set-variable value="${db.queries.get_todays_attendance}" doc:name="query" doc:id="6ddc03b4-91a4-4cfc-9942-40516cbc0622" variableName="query" />
+        <try doc:name="Try" doc:id="74c7564b-8fe2-4203-b272-63b1edc2344c">
+            <flow-ref doc:name="commonsFlow|read" doc:id="79ae2f5d-e88b-4f7b-a26c-4537f02a597a" name="commonsFlow|read" />
+            <ee:transform doc:name="Remove null value and conversion to list" doc:id="a507a0a1-c2c7-495d-bed9-e066711f943a">
+                <ee:message>
+                    <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+fun cleanObject(data: Object) =
+	data mapObject ((value, key, index) -> (key): if(value != null) value else '')
+fun cleanArray(data: Array) =
+	data map ((i, idx) -> cleanObject(i))
+
+---
+if(payload is Array) cleanArray(payload) else [cleanObject(payload)]]]></ee:set-payload>
+                </ee:message>
+            </ee:transform>
+            <error-handler>
+                <on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="1764c1d8-d4c6-4a90-8cc0-1b3bde658192">
+                    <logger level="INFO" doc:name="No attendance yet inserted" doc:id="4b7a47df-5024-46fe-8383-1ee8770198ef" message="No attendance yet inserted." />
+                    <ee:transform doc:name="Prepare empty data response" doc:id="c91c6e07-d7f4-4a8d-965c-3c05f07a4865">
+                        <ee:message>
+                            <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+[
+    {
+        "name": "-",
+        "in_time": "-",
+        "out_time": "-",
+        "class_id": "-"
+    }
+]]]></ee:set-payload>
+                        </ee:message>
+                    </ee:transform>
+                </on-error-continue>
+            </error-handler>
+        </try>
+        <logger level="INFO" doc:name="get:\attendance\today:student_attendance_raml-config|End" doc:id="2b68dca1-38c6-4984-9287-3aec331d6e8e" message="get:\attendance\today:student_attendance_raml-config|End" />
+    </flow>
+    <flow name="get:\user:student_attendance_raml-config">
+        <logger level="INFO" message="get:\user:student_attendance_raml-config|Start" doc:name="get:\user:student_attendance_raml-config|Start" />
+        <set-variable value="${db.queries.get_all_user}" doc:name="query" doc:id="d4bfc2bc-c5ee-4fb1-926a-010c96e5bfdf" variableName="query" />
+        <set-payload value="#[{}]" doc:name="Set Payload" doc:id="65bd9ea5-d4d1-4ec8-95a0-898d5f915467" />
+        <flow-ref doc:name="commonsFlow|read" doc:id="76c32bc6-c710-41f9-b6e0-3ebbb18f2ffd" name="commonsFlow|read" />
+        <logger level="INFO" doc:name="get:\user:student_attendance_raml-config|End" doc:id="c0b861a5-6a84-4c60-bfc7-930d42b2ef48" message="get:\user:student_attendance_raml-config|End" />
+    </flow>
+    <flow name="get:\user\(id):student_attendance_raml-config">
+        <ee:transform doc:name="Transform Message">
+            <ee:variables>
+                <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <logger level="INFO" message="get:\user\(id):student_attendance_raml-config" />
+    </flow>
+    <flow name="get:\attendance\(id):student_attendance_raml-config">
+        <logger level="INFO" doc:name="get:\attendance\(id):student_attendance_raml-config|Start" doc:id="9a9d0289-1778-4aa8-9981-62e37ff66f09" message="get:\attendance\(id):student_attendance_raml-config|Start" />
+        <set-variable value="${db.queries.get_attendance}" doc:name="query" doc:id="ad6b4830-31f8-48af-ba0b-6fa81c3a402e" variableName="query" />
+        <flow-ref doc:name="attendance_implementationFlow|read_by_key" doc:id="cb3ea13f-6fd2-472e-85fa-370ecc6b6b7f" name="attendance_implementationFlow|read_by_key" />
+        <logger level="INFO" doc:name="get:\attendance\(id):student_attendance_raml-config|End" doc:id="576d3a00-a9ef-44cc-a7a5-df1a9fe7db36" message="get:\attendance\(id):student_attendance_raml-config|End" />
+    </flow>
+    <flow name="get:\student\(id):student_attendance_raml-config" doc:id="eb588580-0d44-4979-b3c2-2acbf6cd7796">
+        <logger level="INFO" message="get:\student\(id):student_attendance_raml-config|Start" doc:name="get:\student\(id):student_attendance_raml-config|Start" />
+        <set-variable value="${db.queries.get_student}" doc:name="query" doc:id="e372a5c7-a27d-4eb2-ab4b-5f67bc3dcd99" variableName="query" />
+        <flow-ref doc:name="attendance_implementationFlow|read_by_key" doc:id="f02b5f42-66f7-4218-abe1-01cf8bf3ef10" name="attendance_implementationFlow|read_by_key" />
+        <logger level="INFO" doc:name="get:\student\(id):student_attendance_raml-config|End" doc:id="3c0e2f9d-b092-467f-af7b-ba59a8596144" message="get:\student\(id):student_attendance_raml-config|End" />
+    </flow>
+    <flow name="get:\student\image\(imageCode):student_attendance_raml-config">
+        <logger level="INFO" message="get:\student\image\(imageCode):student_attendance_raml-config|Start" doc:name="get:\student\image\(imageCode):student_attendance_raml-config|Start" />
+        <ee:transform doc:name="Transform Message">
+            <ee:variables>
+                <ee:set-variable variableName="imageCode">attributes.uriParams.'imageCode'</ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <flow-ref doc:name="student_implemFlow_read_image" doc:id="4a771ec5-b4a2-4b99-bb34-d4ba56394fd6" name="student_implemFlow_read_image" />
+        <logger level="INFO" doc:name="get:\student\image\(imageCode):student_attendance_raml-config|End" doc:id="17c14945-fdbd-4b87-a0bc-cf3700499130" message="get:\student\image\(imageCode):student_attendance_raml-config|End" />
+    </flow>
+    <flow name="post:\attendance:application\json:student_attendance_raml-config">
+        <logger level="INFO" doc:name="post:\attendance:application\json:student_attendance_raml-config|Start" doc:id="013361d9-2e44-4a06-a1a9-12f0f28b20a8" message="post:\attendance:application\json:student_attendance_raml-config|Start" />
+        <flow-ref doc:name="attendance_implementationFlow|insert_attendance" doc:id="fcb4b42f-ed1e-4a4d-9f80-f982524ad341" name="attendance_implementationFlow|insert_attendance" />
+        <logger level="INFO" doc:name="post:\attendance:application\json:student_attendance_raml-config|End" doc:id="28b25d17-aadf-4580-a16a-86cbbc99c9cf" message="post:\attendance:application\json:student_attendance_raml-config|End" />
+    </flow>
+    <flow name="post:\student\image:application\json:student_attendance_raml-config">
+        <logger level="INFO" doc:name="post:\student\image:application\json:student_attendance_raml-config|Start" doc:id="9f295684-919b-42bb-8e10-042028849d93" message="post:\student\image:application\json:student_attendance_raml-config|Start" />
+        <flow-ref doc:name="student_implemFlow_image" doc:id="a1542da8-3887-42f5-b8a1-a38060381d04" name="student_implemFlow_image" />
+        <logger level="INFO" doc:name="post:\student\image:application\json:student_attendance_raml-config|End" doc:id="15a6e34e-30dd-4486-b6de-debf18e20e27" message="post:\student\image:application\json:student_attendance_raml-config|End" />
+    </flow>
+    <flow name="post:\student:application\json:student_attendance_raml-config">
+        <logger level="INFO" doc:name="post:\student:application\json:student_attendance_raml-config|Start" doc:id="e1862383-f38c-4aff-8cd9-207aaf049378" message="post:\student:application\json:student_attendance_raml-config|Start" />
+        <set-variable value="${db.queries.post_student}" doc:name="query" doc:id="4907d32d-d382-4bff-89d2-9dae17cd1660" variableName="query" />
+        <flow-ref doc:name="commonsFlow|insert" doc:id="ea32482a-a0c2-4453-b0d3-36ed3df11206" name="commonsFlow|insert" />
+        <logger level="INFO" doc:name="post:\student:application\json:student_attendance_raml-config|End" doc:id="d014e39b-2674-40f1-9f9b-1de9eec09372" message="post:\student:application\json:student_attendance_raml-config|End" />
+    </flow>
+    <flow name="post:\user:application\json:student_attendance_raml-config">
+        <logger level="INFO" doc:name="post:\user:application\json:student_attendance_raml-config|Start" doc:id="57df850e-32fa-4242-9987-11555da12d98" message="post:\user:application\json:student_attendance_raml-config|Start" />
+        <set-variable value="${db.queries.post_user}" doc:name="query" doc:id="ff7d471f-54cc-4f23-bdee-21f62e875cb7" variableName="query" />
+        <flow-ref doc:name="attendance_implementationFlow|user_insert" doc:id="f6ced9a4-997c-4044-9d3b-f564ec55bca7" name="commonsFlow|insert" />
+        <logger level="INFO" doc:name="post:\user:application\json:student_attendance_raml-config|End" doc:id="d3ca457f-2cef-4673-a273-89bb42eaf8e1" message="post:\user:application\json:student_attendance_raml-config|End" />
+    </flow>
+    <flow name="put:\class\(id):application\json:student_attendance_raml-config">
+        <logger level="INFO" doc:name="put:\class\(id):application\json:student_attendance_raml-config|Start" doc:id="ce82a20e-14b8-41b4-b1b3-8d180f85f42d" message="put:\class\(id):application\json:student_attendance_raml-config|Start" />
+        <set-variable value="class" doc:name="toBeDeleted" doc:id="9d971bbb-9185-4d3c-afb0-8a056359d19b" variableName="toBeDeleted" />
+        <flow-ref doc:name="attendance_implementationFlow|update_by_key" doc:id="baba1957-382f-4a81-8939-823e414aea69" name="attendance_implementationFlow|update_by_key" />
+        <logger level="INFO" doc:name="put:\class\(id):application\json:student_attendance_raml-config|End" doc:id="0bc45353-875e-46bb-8e24-26592d2f0ecd" message="put:\class\(id):application\json:student_attendance_raml-config|End" />
+    </flow>
+    <flow name="delete:\class\(id):student_attendance_raml-config">
+        <logger level="INFO" doc:name="delete:\class\(id):student_attendance_raml-config|Start" doc:id="2a9c42b8-a62f-46a4-934a-43ccc14ca944" message="delete:\class\(id):student_attendance_raml-config|Start" />
+        <set-variable value="class" doc:name="toBeDeleted" doc:id="198a3ddb-c559-4cb5-84d1-eb95a4a77d22" variableName="toBeDeleted" />
+        <flow-ref doc:name="attendance_implementationFlow|delete_by_key" doc:id="d405e236-0da1-4d53-b6bb-15bfc0110ab0" name="attendance_implementationFlow|delete_by_key" />
+        <logger level="INFO" doc:name="delete:\class\(id):student_attendance_raml-config|End" doc:id="069954b6-325a-464a-9dcb-28e4eca02fdb" message="delete:\class\(id):student_attendance_raml-config|End" />
+    </flow>
+    <flow name="patch:\class\(id):application\json:student_attendance_raml-config">
+        <ee:transform doc:name="Transform Message">
+            <ee:variables>
+                <ee:set-variable variableName="id">attributes.uriParams.'id'</ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <logger level="INFO" message="patch:\class\(id):application\json:student_attendance_raml-config" />
+    </flow>
+    <flow name="get:\class:student_attendance_raml-config">
+        <logger level="INFO" doc:name="get:\class:student_attendance_raml-config|Start" doc:id="9fcf8951-6acb-4092-831c-81d0ea02a6d4" message="get:\class:student_attendance_raml-config|Start" />
+        <set-variable value="${db.queries.get_all_class}" doc:name="query" doc:id="af55795b-62f3-4595-ae4b-86cccb0a55f6" variableName="query" />
+        <flow-ref doc:name="commonsFlow|read" doc:id="cb1c3113-800a-432d-b3b7-e357d8c4d73f" name="commonsFlow|read" />
+        <logger level="INFO" doc:name="get:\class:student_attendance_raml-config|End" doc:id="439a9680-7cab-4c18-8a83-de5f56283ded" message="get:\class:student_attendance_raml-config|End" />
+    </flow>
+    <flow name="get:\class\(id):student_attendance_raml-config">
+        <logger level="INFO" doc:name="get:\class\(id):student_attendance_raml-config|Start" doc:id="23327e08-da0a-456f-87b2-0257d9ff9c82" message="get:\class\(id):student_attendance_raml-config|Start" />
+        <set-variable value="${db.queries.get_class}" doc:name="query" doc:id="80fbae5e-6d5f-486c-b255-36f9781319ca" variableName="query" />
+        <flow-ref doc:name="attendance_implementationFlow|read_by_key" doc:id="6369f79a-56dc-4bdc-8650-0d20e51c048d" name="attendance_implementationFlow|read_by_key" />
+        <logger level="INFO" doc:name="get:\class\(id):student_attendance_raml-config|End" doc:id="64189eba-33b5-48a1-bee0-f34c80600b30" message="get:\class\(id):student_attendance_raml-config|End" />
+    </flow>
+    <flow name="post:\class:application\json:student_attendance_raml-config">
+        <logger level="INFO" doc:name="post:\class:application\json:student_attendance_raml-config|Start" doc:id="cc83e6d0-8e30-48ff-8691-c7eeaad6003b" message="post:\class:application\json:student_attendance_raml-config|Start" />
+        <set-variable value="${db.queries.post_class}" doc:name="query" doc:id="abcd9b14-ab69-4914-8c28-710c9ec63a26" variableName="query" />
+        <flow-ref doc:name="commonsFlow|insert" doc:id="d09b55e7-0850-473f-9601-665f3188fb44" name="commonsFlow|insert" />
+        <logger level="INFO" message="post:\class:application\json:student_attendance_raml-config|End" doc:name="post:\class:application\json:student_attendance_raml-config|End" />
+    </flow>
+</mule>

@@ -1,0 +1,134 @@
+http:
+  host: 0.0.0.0
+  port: '8000'
+  basePath: /api/student-attendance/v1
+  readTimeout: '6000'
+  
+# This should be encrypted
+db:
+  image:
+    path: C:/apps/student_biometric_attendance_fe
+  host: localhost
+  port: '3306'
+  dbname: student-attendance
+  username: root
+  password: root
+  
+  queries:
+    post_class: 'INSERT INTO `student-attendance`.`class_tbl`
+                (`ID`,
+                `subject`,
+                `class_period`)
+                VALUES
+                (:ID,
+                :subject,
+                :class_period);'
+    update_class: 'UPDATE `student-attendance`.`class_tbl`
+                SET
+                `subject` = :subject,
+                `class_period` = :class_period
+                WHERE `ID` = :ID;'
+    get_all_class: 'SELECT * FROM `student-attendance`.class_tbl;'
+    get_class: 'SELECT * FROM `student-attendance`.class_tbl where ID = :key;'
+    del_class: 'DELETE FROM `student-attendance`.`class_tbl` WHERE ID = :key;'
+    post_user: 'INSERT INTO `student-attendance`.`user_tbl`
+                (`id`,
+                `name`,
+                `gender`,
+                `address`,
+                `user_type`,
+                `username`,
+                `password`)
+                VALUES
+                (:id,
+                :name,
+                :gender,
+                :address,
+                :user_type,
+                :username,
+                :password);'
+    post_attendance: 'INSERT INTO `student-attendance`.`attendance_record`
+                (`student_id`,
+                `in`,
+                `out`,
+                `class_id`)
+                VALUES
+                (:student_id,
+                :in,
+                :out,
+                :class_id);'
+    get_attendance_of: "SELECT `record_no`,`name`, `id`, 
+                DATE_FORMAT(STR_TO_DATE(`attendance_record`.`in`, '%Y-%m-%d %h:%i:%s %p'), '%r')  AS `in_time`,
+                DATE_FORMAT(STR_TO_DATE(`attendance_record`.`out`, '%Y-%m-%d %h:%i:%s %p'), '%r')  AS `out_time`,
+                DATE_FORMAT(`attendance_record`.`in`, '%Y-%m-%d') AS `date`
+                FROM `student-attendance`.`student_tbl` inner join `student-attendance`.`attendance_record`
+                on `attendance_record`.`student_id` = `student_tbl`.`id`
+                WHERE (DATE(`attendance_record`.`in`) = CURDATE() or DATE(`attendance_record`.`out`) = CURDATE()) and (`id` = :student_id and `class_id` = :class_id);"
+    patch_attendance: 'UPDATE `student-attendance`.`attendance_record`
+                SET
+                `student_id` = :id,
+                `out` = :out
+                WHERE `record_no` = :record_no and `class_id` = :class_id;'
+    post_student: 'INSERT INTO `student-attendance`.`student_tbl`
+                (`id`,
+                `name`,
+                `address`,
+                `course`,
+                `gender`)
+                VALUES
+                (:id,
+                :name,
+                :address,
+                :course,
+                :gender);'
+    update_student: 'UPDATE `student-attendance`.`student_tbl`
+                SET
+                `id` = :new_ID,
+                `name` = :name,
+                `address` = :address,
+                `course` = :course,
+                `gender` = :gender
+                WHERE `id` = :id;'
+    update_user: 'UPDATE `student-attendance`.`user_tbl`
+                SET
+                `id` = :new_ID,
+                `name` = :name,
+                `gender` = :gender,
+                `address` = :address,
+                `user_type` = :user_type,
+                `username` = :username,
+                `password` = :password
+                WHERE `id` = :id;'
+    update_attendance: 'UPDATE `student-attendance`.`attendance_record`
+                SET
+                `student_id` = :student_id,
+                `in` = :in,
+                `out` = :out
+                WHERE `record_no` = :record_no;'
+    get_todays_attendance: "SELECT 
+                `name`, 
+                DATE_FORMAT(STR_TO_DATE(`attendance_record`.`in`, '%Y-%m-%d %h:%i:%s %p'), '%r')  AS `in_time`,
+                DATE_FORMAT(STR_TO_DATE(`attendance_record`.`out`, '%Y-%m-%d %h:%i:%s %p'), '%r')  AS `out_time`,
+                DATE_FORMAT(`attendance_record`.`in`, '%Y-%m-%d') AS `date`,
+                `class_id`
+                FROM `student-attendance`.`student_tbl` inner join `student-attendance`.`attendance_record`
+                on `attendance_record`.`student_id` = `student_tbl`.`id`
+                WHERE (DATE(`attendance_record`.`in`) = CURDATE() or DATE(`attendance_record`.`out`) = CURDATE()) and `class_id` = :class_id;"
+    get_userAccount: "SELECT * FROM `student-attendance`.user_tbl where (`username` = :username and `password` = :password);"
+    get_student: 'SELECT * FROM `student-attendance`.`student_tbl` where `student_tbl`.`id` = :key;'
+    get_attendance: 'SELECT * FROM `student-attendance`.attendance_record where student_id = :key;'
+    get_attendance_student: 'SELECT * FROM `student-attendance`.`student_tbl` where `student_tbl`.`id` = :key;'
+    get_user: 'SELECT * FROM `student-attendance`.user_tbl where id = :key;'
+    del_attendance: 'DELETE FROM `student-attendance`.`attendance_record` WHERE `attendance_record`.`record_no` = :key;'
+    del_student: 'DELETE FROM `student-attendance`.`student_tbl` WHERE `student_tbl`.`id` = :key;'
+    del_attendance_student: 'DELETE FROM `student-attendance`.`attendance_record` WHERE `attendance_record`.`student_id` = :key;'
+    del_user: 'DELETE FROM `student-attendance`.`user_tbl` WHERE id = :key;'
+    get_all_student: 'SELECT * FROM `student-attendance`.student_tbl;'
+    get_all_user: 'SELECT * FROM `student-attendance`.user_tbl;'
+    get_all_attendance: "SELECT record_no, `name`, DATE_FORMAT(STR_TO_DATE(`attendance_record`.`in`, '%Y-%m-%d %h:%i:%s %p'), '%r')  AS `in_time`,
+                DATE_FORMAT(STR_TO_DATE(`attendance_record`.`out`, '%Y-%m-%d %h:%i:%s %p'), '%r')  AS `out_time`,
+                DATE_FORMAT(`attendance_record`.`in`, '%Y-%m-%d') AS `in_date` ,
+                DATE_FORMAT(`attendance_record`.`out`, '%Y-%m-%d') AS `out_date`,
+                `class_id` 
+                FROM `student-attendance`.attendance_record inner join `student-attendance`.student_tbl
+                on student_tbl.id = attendance_record.student_id;"

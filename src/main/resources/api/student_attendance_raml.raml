@@ -1,0 +1,307 @@
+#%RAML 1.0
+
+title: student-attendance
+description: This API has the capability to manage the data of student attendance in a school.
+version: 1.1
+baseUri: /api/student-attendance/v1
+
+/class:
+    post:
+        body:
+            application/json:
+                type: any
+
+        responses:
+            200: 
+                body:
+                    application/json:
+                     type: any
+    get:
+        responses:
+            200:
+                body:
+                    application/json:
+                        type: any
+    /{id}:
+        uriParameters:
+            id:
+                type: string
+
+        put:
+            body:
+                application/json:
+                    type: any
+
+            responses:
+                200: 
+                    body:
+                        application/json:
+                            type: any
+
+        patch:
+            body:
+                application/json:
+                    type: any
+
+            responses:
+                200: 
+                    body:
+                        application/json:
+                            type: any
+
+        get:
+            responses:
+                200:
+                    body:
+                        application/json:
+                            type: any
+
+        delete:
+            responses:
+                200:
+                    body:
+                        application/json:
+                            type: any
+
+/student:
+    post:
+        body:
+            application/json:
+                type: any
+
+        responses:
+            200: 
+                body:
+                    application/json:
+                     type: any
+    get:
+        responses:
+            200:
+                body:
+                    application/json:
+                        type: any
+    /image:
+      post:
+        body:
+          application/json:
+            type: object
+            properties:
+              imageCode:
+                type: string
+                minLength: 2
+                required: true
+              imageBlob:
+                type: array
+                required: true
+          
+        responses:
+          200:
+            body:
+              application/json:
+                type: any
+      get:
+        responses:
+            200:
+                body:
+                    application/json:
+                        type: any
+                
+      /{imageCode}:
+        uriParameters:
+          imageCode: string
+        get:        
+          responses:
+            200:
+              body:
+                application/json:
+                  type: object
+                  properties:
+                    imageCode:
+                      type: string
+                      minLength: 2
+                      required: true
+                    imageBlob:
+                      type: array
+                      required: true
+    
+    /{id}:
+        uriParameters:
+            id:
+                type: string
+
+        put:
+            body:
+                application/json:
+                    type: any
+
+            responses:
+                200: 
+                    body:
+                        application/json:
+                            type: any
+
+        patch:
+            body:
+                application/json:
+                    type: any
+
+            responses:
+                200: 
+                    body:
+                        application/json:
+                            type: any
+
+        get:
+            responses:
+                200:
+                    body:
+                        application/json:
+                            type: any
+
+        delete:
+            responses:
+                200:
+                    body:
+                        application/json:
+                            type: any
+
+/user:
+    post:
+        body:
+            application/json:
+                type: any
+
+        responses:
+            200: 
+                body:
+                    application/json:
+                     type: any
+    get:
+        responses:
+            200:
+                body:
+                    application/json:
+                        type: any
+    /validation:
+      patch:
+        body:
+          application/json:
+            type: object
+            properties:
+              username:
+                type: string
+                minLength: 1
+              password:
+                type: string
+                minLength: 1
+        responses:
+          200:
+            body:
+              application/json:
+                type: any
+    /{id}:
+        uriParameters:
+            id:
+                type: string
+
+        put:
+            body:
+                application/json:
+                    type: any
+
+            responses:
+                200: 
+                    body:
+                        application/json:
+                            type: any
+
+        patch:
+            body:
+                application/json:
+                    type: any
+
+            responses:
+                200: 
+                    body:
+                        application/json:
+                            type: any
+
+        get:
+            responses:
+                200:
+                    body:
+                        application/json:
+                            type: any
+
+        delete:
+            responses:
+                200:
+                    body:
+                        application/json:
+                            type: any
+
+/attendance:
+    post:
+        body:
+            application/json:
+                type: any
+
+        responses:
+            200: 
+                body:
+                    application/json:
+                     type: any
+    get:
+        responses:
+            200:
+                body:
+                    application/json:
+                        type: any
+    
+    /today:
+      get:
+        responses:
+          200:
+            body:
+              application/json:
+                type: any 
+    /{id}:
+        uriParameters:
+            id:
+                type: string
+
+        put:
+            body:
+                application/json:
+                    type: any
+
+            responses:
+                200: 
+                    body:
+                        application/json:
+                            type: any
+
+        patch:
+            body:
+                application/json:
+                    type: any
+
+            responses:
+                200: 
+                    body:
+                        application/json:
+                            type: any
+
+        get:
+            responses:
+                200:
+                    body:
+                        application/json:
+                            type: any
+
+        delete:
+            responses:
+                200:
+                    body:
+                        application/json:
+                            type: any

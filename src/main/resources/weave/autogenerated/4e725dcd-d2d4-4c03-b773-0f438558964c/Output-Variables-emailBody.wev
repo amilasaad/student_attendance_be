@@ -1,0 +1,10 @@
+%dw 2.0
+
+type auto_4e725dcd_d2d4_4c03_b773_0f438558964c_Output_Variables_emailBody = {|
+  toEmailAddress: Any, 
+  studentName: Any, 
+  subject: String, 
+  timeIn: String {"format": "yyyy-MM-dd hh:mm:ss a"}, 
+  timeOut: String {"format": "yyyy-MM-dd hh:mm:ss a"}
+|}
+
